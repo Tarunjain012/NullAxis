@@ -1,6 +1,8 @@
 # NYC 311 Data Analytics Agent
 
-A chat-based analytics agent for analyzing NYC 311 service request data using LangGraph, DeepSeek, and DuckDB.
+A fully functional, LLM-powered analytics agent for the NYC 311 dataset.  
+It uses DeepSeek to generate & repair SQL queries dynamically, LangGraph to orchestrate the agent workflow, and DuckDB for fast local analytics.  
+Ask natural-language questions and get results + generated SQL instantly.
 
 ## Quick Start
 
@@ -12,7 +14,7 @@ A chat-based analytics agent for analyzing NYC 311 service request data using La
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Tarunjain012/NullAxis.git
    cd NullAxis
    ```
 
@@ -35,7 +37,7 @@ A chat-based analytics agent for analyzing NYC 311 service request data using La
 
 4. **Download and load data**
    - Download the NYC 311 dataset from [NYC Open Data](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9)
-   - Place the CSV file in the `data/` directory
+   - Place the downloaded NYC 311 CSV in the `data/` directory
    - Run the ETL script:
      ```bash
      python -m backend.etl data/311_Service_Requests_from_2010_to_Present.csv
@@ -65,11 +67,12 @@ A chat-based analytics agent for analyzing NYC 311 service request data using La
 Once both backend and frontend are running:
 
 1. **Open the web interface** (from step 6 above)
-2. **Enter a question** in the text area, for example:
-   - "What are the top 10 complaint types by number of records?"
-   - "For the top 5 complaint types, what percent were closed within 3 days?"
-   - "Which ZIP code has the highest number of complaints?"
-   - "What proportion of complaints include a valid latitude/longitude (i.e., geocoded)?"
+2. **Example queries you can try** :
+  - "Top 10 complaint types"
+  - "Percent of requests closed within 3 days"
+  - "Which ZIP code reported the most complaints in 2024?"
+  - "Average time_to_close_days by borough"
+  - "Trend of complaints over months for Noise complaints"
 
 3. **Click "Ask"** or press `Ctrl+Enter` (Windows/Linux) or `Shift+Enter` (Mac)
 
