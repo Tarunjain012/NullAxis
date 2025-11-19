@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC 311 Analytics Agent</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23grad)'/%3E%3Cpath d='M30 35 L50 25 L70 35 L70 50 L50 60 L30 50 Z' fill='white' opacity='0.9'/%3E%3Cpath d='M35 55 L50 48 L65 55 L65 70 L50 75 L35 70 Z' fill='white' opacity='0.9'/%3E%3Ccircle cx='50' cy='45' r='8' fill='%23667eea'/%3E%3C/svg%3E">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg-white);
+            border-radius: 16px;
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+            max-height: 900px;
+        }
+
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-content h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .logo svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .header-content .subtitle {
+            opacity: 0.9;
+            font-size: 0.8rem;
+            font-weight: 400;
+            margin-left: 8px;
+            padding-left: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-icon {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .chat-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            background: var(--bg-light);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .message-user .message-avatar {
+            background: var(--primary-gradient);
+        }
+
+        .message-assistant .message-avatar {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .message-user .message-content {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .message-user .message-bubble {
+            background: var(--primary-gradient);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-assistant .message-bubble {
+            background: var(--bg-white);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .answer-section {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .answer-text {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        .sql-section {
+            margin-top: 16px;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .sql-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+
+        .sql-header h4 {
+            color: #e2e8f0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .btn-copy {
+            background: #334155;
+            border: none;
+            color: #e2e8f0;
+            padding: 4px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-copy:hover {
+            background: #475569;
+        }
+
+        .btn-copy.copied {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .sql-code {
+            padding: 16px;
+            color: #e2e8f0;
+            font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .table-section {
+            margin-top: 16px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .table-header {
+            padding: 12px 16px;
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h4 {
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .table-info {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-white);
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-light);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .error-section {
+            margin-top: 12px;
+            padding: 16px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            border-left: 4px solid var(--error-color);
+        }
+
+        .error-title {
+            color: var(--error-color);
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .error-text {
+            color: #991b1b;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .input-section {
+            padding: 12px 20px;
+            background: var(--bg-white);
+            border-top: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-container {
+            flex: 1;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: none;
+            min-height: 60px;
+            max-height: 200px;
+            transition: all 0.2s;
+            background: var(--bg-white);
+            color: var(--text-primary);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .input-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        .btn-submit {
+            padding: 14px 28px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            height: 60px;
+            flex-shrink: 0;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .message-loading {
+            display: flex;
+            gap: 12px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message-loading .message-avatar {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            animation: loadingDot 1.4s ease-in-out infinite;
+        }
+
+        .loading-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes loadingDot {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .examples-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 6px;
+            padding: 2px 0;
+            transition: color 0.2s;
+        }
+
+        .examples-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        .examples-toggle-icon {
+            transition: transform 0.2s;
+            font-size: 0.7rem;
+        }
+
+        .examples-toggle.expanded .examples-toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        .examples-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .examples-container.expanded {
+            max-height: 280px;
+            margin-bottom: 6px;
+        }
+
+        .examples {
+            padding: 4px 0;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .example-question {
+            padding: 8px 10px;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: normal;
+            display: flex;
+            align-items: center;
+            line-height: 1.3;
+            min-height: 44px;
+        }
+
+        .example-question:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 1rem;
+            max-width: 400px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scrollbar styling */
+        .messages-container::-webkit-scrollbar,
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-container::-webkit-scrollbar-track,
+        .table-wrapper::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+
+        .messages-container::-webkit-scrollbar-thumb,
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover,
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                height: calc(100vh - 20px);
+                border-radius: 12px;
+            }
+
+            .header {
+                padding: 10px 16px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+
+            .header-content .subtitle {
+                margin-left: 0;
+                padding-left: 0;
+                border-left: none;
+                margin-top: 2px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .messages-container {
+                padding: 16px;
+            }
+
+            .input-section {
+                padding: 12px 16px;
+            }
+
+            .message-bubble {
+                max-width: 95%;
+            }
+
+            .examples {
+                grid-template-columns: 1fr;
+            }
+
+            .example-question {
+                white-space: normal;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>
+                    <div class="logo">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                            <defs>
+                                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95" />
+                                    <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.8" />
+                                </linearGradient>
+                            </defs>
+                            <circle cx="50" cy="50" r="45" fill="url(#logoGrad)" opacity="0.2"/>
+                            <path d="M30 35 L50 25 L70 35 L70 50 L50 60 L30 50 Z" fill="white" opacity="0.95"/>
+                            <path d="M35 55 L50 48 L65 55 L65 70 L50 75 L35 70 Z" fill="white" opacity="0.95"/>
+                            <circle cx="50" cy="45" r="8" fill="white"/>
+                            <rect x="42" y="58" width="16" height="4" rx="2" fill="white"/>
+                            <rect x="42" y="66" width="16" height="4" rx="2" fill="white"/>
+                            <rect x="42" y="74" width="12" height="4" rx="2" fill="white"/>
+                        </svg>
+                    </div>
+                    <span>NYC 311 Analytics Agent</span>
+                </h1>
+                <span class="subtitle">Ask questions about NYC 311 service requests data</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="clearChat()" title="Clear conversation">
+                    <span>🗑️</span>
+                    <span>Clear</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-wrapper">
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <div class="empty-state-text">
+                        <p>Start a conversation by asking a question about NYC 311 data.</p>
+                        <p style="margin-top: 8px; font-size: 0.875rem;">Try one of the example questions below!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <div class="examples-toggle" onclick="toggleExamples()">
+                    <span class="examples-toggle-icon">▶</span>
+                    <span>Example questions</span>
+                </div>
+                <div class="examples-container" id="examplesContainer">
+                    <div class="examples">
+                        <div class="example-question" onclick="setQuestion('What are the top 10 complaint types by number of records?')">
+                            What are the top 10 complaint types by number of records?
+                        </div>
+                        <div class="example-question" onclick="setQuestion('For the top 5 complaint types, what percent were closed within 3 days?')">
+                            For the top 5 complaint types, what percent were closed within 3 days?
+                        </div>
+                        <div class="example-question" onclick="setQuestion('Which ZIP code has the highest number of complaints?')">
+                            Which ZIP code has the highest number of complaints?
+                        </div>
+                        <div class="example-question" onclick="setQuestion('What proportion of complaints include a valid latitude/longitude (i.e., geocoded)?')">
+                            What proportion of complaints include a valid latitude/longitude (i.e., geocoded)?
+                        </div>
+                    </div>
+                </div>
+                <div class="input-wrapper">
+                    <div class="input-container">
+                        <textarea 
+                            id="questionInput" 
+                            placeholder="Ask a question about NYC 311 data..."
+                            rows="1"
+                        ></textarea>
+                        <div class="input-hint">Ctrl+Enter to send</div>
+                    </div>
+                    <button id="submitBtn" class="btn-submit" onclick="submitQuestion()">
+                        <span>Ask</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/chat';
+        let messageIdCounter = 0;
+
+        function setQuestion(question) {
+            const input = document.getElementById('questionInput');
+            input.value = question;
+            input.focus();
+            autoResizeTextarea(input);
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+
+        function addUserMessage(text) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-user';
+            messageDiv.id = `message-${messageIdCounter++}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">👤</div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <div class="message-text">${escapeHtml(text)}</div>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+            return messageDiv;
+        }
+
+        function addLoadingMessage() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-loading';
+            messageDiv.id = `loading-${messageIdCounter}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="loading-indicator">
+                        <div class="loading-dots">
+                            <div class="loading-dot"></div>
+                            <div class="loading-dot"></div>
+                            <div class="loading-dot"></div>
+                        </div>
+                        <span class="loading-text">Thinking...</span>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+            return messageDiv;
+        }
+
+        function addAssistantMessage(data) {
+            const messagesContainer = document.getElementById('messagesContainer');
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Remove loading message if it exists
+            const loadingMessage = messagesContainer.querySelector(`#loading-${messageIdCounter}`);
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-assistant';
+            messageDiv.id = `message-${messageIdCounter++}`;
+            
+            let content = '<div class="message-bubble">';
+            
+            // Add answer text
+            if (data.answer_text) {
+                content += `
+                    <div class="answer-section">
+                        <div class="answer-text">${escapeHtml(data.answer_text)}</div>
+                    </div>
+                `;
+            }
+            
+            // Add error if any
+            if (data.error) {
+                content += `
+                    <div class="error-section">
+                        <div class="error-title">
+                            <span>⚠️</span>
+                            <span>Error</span>
+                        </div>
+                        <div class="error-text">${escapeHtml(data.error)}</div>
+                    </div>
+                `;
+            }
+            
+            // Add SQL section
+            if (data.sql) {
+                const sqlId = `sql-${messageIdCounter}`;
+                content += `
+                    <div class="sql-section">
+                        <div class="sql-header">
+                            <h4>Generated SQL</h4>
+                            <button class="btn-copy" data-copy-target="${sqlId}">Copy</button>
+                        </div>
+                        <div class="sql-code" id="${sqlId}">${escapeHtml(data.sql)}</div>
+                    </div>
+                `;
+            }
+            
+            // Add table section
+            if (data.columns && data.columns.length > 0 && data.rows && data.rows.length > 0) {
+                const tableId = `table-${messageIdCounter}`;
+                content += `
+                    <div class="table-section">
+                        <div class="table-header">
+                            <h4>Results</h4>
+                            <div class="table-info">${data.rows.length} row${data.rows.length !== 1 ? 's' : ''}</div>
+                        </div>
+                        <div class="table-wrapper">
+                            ${generateTableHTML(data.columns, data.rows, tableId)}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content += '</div>';
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    ${content}
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+            return messageDiv;
+        }
+
+        function generateTableHTML(columns, rows, tableId) {
+            let html = `<table id="${tableId}"><thead><tr>`;
+            columns.forEach(col => {
+                html += `<th>${escapeHtml(col)}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            rows.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    const value = row[col];
+                    const formattedValue = formatCellValue(value);
+                    html += `<td>${formattedValue}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function formatCellValue(value) {
+            if (value === null || value === undefined) {
+                return '<span style="color: #94a3b8;">—</span>';
+            }
+            
+            const str = String(value);
+            
+            // Format numbers with commas
+            if (/^\d+$/.test(str) && str.length > 3) {
+                return str.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            
+            // Format decimal numbers
+            if (/^\d+\.\d+$/.test(str)) {
+                const num = parseFloat(str);
+                if (num >= 1000) {
+                    return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+                }
+                return num.toFixed(2);
+            }
+            
+            return escapeHtml(str);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function scrollToBottom() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function copyToClipboard(elementId, button) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const text = element.textContent || element.innerText;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Event delegation for copy buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-copy')) {
+                const targetId = e.target.getAttribute('data-copy-target');
+                if (targetId) {
+                    copyToClipboard(targetId, e.target);
+                }
+            }
+        });
+
+        function toggleExamples() {
+            const container = document.getElementById('examplesContainer');
+            const toggle = document.querySelector('.examples-toggle');
+            container.classList.toggle('expanded');
+            toggle.classList.toggle('expanded');
+        }
+
+        function collapseExamples() {
+            const container = document.getElementById('examplesContainer');
+            const toggle = document.querySelector('.examples-toggle');
+            if (container.classList.contains('expanded')) {
+                container.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+            }
+        }
+
+        function clearChat() {
+            if (confirm('Are you sure you want to clear the conversation?')) {
+                const messagesContainer = document.getElementById('messagesContainer');
+                messagesContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <div class="empty-state-text">
+                            <p>Start a conversation by asking a question about NYC 311 data.</p>
+                            <p style="margin-top: 8px; font-size: 0.875rem;">Click "Example questions" above to see suggestions!</p>
+                        </div>
+                    </div>
+                `;
+                messageIdCounter = 0;
+            }
+        }
+
+        async function submitQuestion() {
+            const question = document.getElementById('questionInput').value.trim();
+            if (!question) {
+                return;
+            }
+
+            console.log('📥 [FRONTEND] Submitting question:', question);
+
+            // Collapse examples panel if open
+            collapseExamples();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const input = document.getElementById('questionInput');
+            
+            // Clear input and reset height
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Add user message
+            addUserMessage(question);
+            
+            // Show loading message in chat
+            addLoadingMessage();
+            
+            // Show loading state on button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span><span>Processing...</span>';
+
+            const startTime = Date.now();
+            try {
+                console.log('🌐 [FRONTEND] Sending POST request to:', API_URL);
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+                
+                const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                console.log(`⏱️  [FRONTEND] Request completed in ${elapsedTime}s`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ [FRONTEND] Response received:', {
+                    hasAnswer: !!data.answer_text,
+                    hasSQL: !!data.sql,
+                    hasError: !!data.error,
+                    columns: data.columns?.length || 0,
+                    rows: data.rows?.length || 0
+                });
+
+                // Add assistant message with all data (this will replace the loading message)
+                addAssistantMessage(data);
+                
+                console.log('✅ [FRONTEND] UI updated successfully');
+
+            } catch (error) {
+                console.error('❌ [FRONTEND] Request failed:', error);
+                addAssistantMessage({
+                    error: `Error: ${error.message}`,
+                    answer_text: null,
+                    sql: null
+                });
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Ask</span>';
+                input.focus();
+            }
+        }
+
+        // Auto-resize textarea
+        const textarea = document.getElementById('questionInput');
+        textarea.addEventListener('input', function() {
+            autoResizeTextarea(this);
+        });
+
+        // Allow Enter key to submit (Ctrl+Enter or Shift+Enter)
+        textarea.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.shiftKey) && e.key === 'Enter') {
+                e.preventDefault();
+                submitQuestion();
+            }
+        });
+
+        // Focus input on load
+        window.addEventListener('load', function() {
+            textarea.focus();
+        });
+    </script>
+</body>
+</html>
+
