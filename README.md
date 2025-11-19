@@ -18,12 +18,25 @@ Ask natural-language questions and get results + generated SQL instantly.
    cd NullAxis
    ```
 
-2. **Install dependencies**
+2. **Create & activate a virtual environment (recommended)**
+
+   ```bash
+   # Windows
+   python -m venv venv
+   venv\Scripts\activate
+
+   # macOS / Linux
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install backend dependencies**
+
    ```bash
    pip install -r backend/requirements.txt
    ```
 
-3. **Create `.env` file** in the project root:
+4. **Create `.env` file** in the project root:
    - Copy `.env.example` to `.env`: `cp .env.example .env` (Linux/Mac) or `copy .env.example .env` (Windows)
    - Or create `.env` manually with:
      ```env
@@ -35,22 +48,27 @@ Ask natural-language questions and get results + generated SQL instantly.
      ```
    - Replace `your_deepseek_api_key_here` with your actual DeepSeek API key
 
-4. **Download and load data**
+5. **Download and load data**
    - Download the NYC 311 dataset from [NYC Open Data](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-from-2010-to-Present/erm2-nwe9)
-   - Place the downloaded NYC 311 CSV in the `data/` directory
-   - Run the ETL script:
-     ```bash
-     python -m backend.etl data/311_Service_Requests_from_2010_to_Present.csv
-     ```
-   - **Note:** This may take several minutes for large datasets. The script will show progress.
+   - Place the downloaded CSV in the `data/` directory
 
-5. **Start the backend server**
+   **Important (Windows/Linux/Mac):**  
+   Run the ETL script *as a module* to avoid Python relative-import errors:
+
+   ```bash
+   python -m backend.etl data/311_Service_Requests_from_2010_to_Present.csv
+   ```
+
+   - This builds `data/nyc_311.duckdb`
+   - ETL may take several minutes depending on CSV size
+
+6. **Start the backend server**
    ```bash
    uvicorn backend.main:app --reload
    ```
-   The API will be available at `http://localhost:8000`
+   Backend runs at: [http://localhost:8000](http://localhost:8000)
 
-6. **Open the frontend**
+7. **Open the frontend**
    - Option 1: Open `frontend/index.html` directly in your browser
    - Option 2: Serve it with a simple HTTP server:
      ```bash
@@ -157,6 +175,9 @@ You can verify the backend is running by visiting:
 
 ## Troubleshooting
 
+- **ETL script error: "attempted relative import with no known parent package"**  
+  Run the script using module syntax instead:  
+  `python -m backend.etl data/file.csv`
 - **Backend not starting**: Check that port 8000 is not in use
 - **API errors**: Verify your DeepSeek API key is correct in `.env`
 - **Database errors**: Ensure the ETL script completed successfully
